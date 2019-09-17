@@ -18,6 +18,15 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
+from typing import List
+from typing import Optional
+from typing import Union
+from typing import Callable
+from typing import NewType
+
+from game import Directions
+
+Fringe = NewType('Fringe', Union[util.Queue, util.Stack, util.PriorityQueue])
 
 class SearchProblem:
     """
@@ -61,6 +70,38 @@ class SearchProblem:
         """
         util.raiseNotDefined()
 
+class Node(object):
+    """This class holds information about a node used in a graph search
+    
+    Attributes:
+        state: A search state.
+        parent: The parent Node of this node
+        action: The action used to get to the current state from the parent state
+    """
+
+    def __init__(self,
+                 state: any,
+                 parent: Optional['Node'] = None,
+                 action: Optional[Directions] = None) -> None:
+        """Inits Node with a state and parent."""
+        self.state = state
+        self.parent = parent
+        self.action = action
+    
+    @property
+    def directions(self) -> List[Directions]:
+        """Gets the directions to the state."""
+        return self._get_directions()
+    
+    def _get_directions(self) -> List[Directions]:
+        """Indirect accessor to calculate the 'directions' property."""
+        if self.parent is None:
+            return []
+        else:
+            return self.parent.directions + [self.action]
+    
+    def __str__(self) -> str:
+        return "Node at (%s)" % (", ".join(map(str, self.state)))
 
 def tinyMazeSearch(problem):
     """
@@ -72,22 +113,36 @@ def tinyMazeSearch(problem):
     w = Directions.WEST
     return  [s, s, w, s, w, w, s, w]
 
+def _graph_search(problem: SearchProblem,
+                  fringe: Fringe,
+                  strategy: Callable[[Fringe, Node], None]) -> Node:
+    """Preforms a graph search on a problem using a given fringe and strategy.
+
+    Args:
+        problem: The problem being solved
+        fringe: A storage system for nodes to be saved in
+        strategy: A function for how to add items to the fringe
+
+    Returns:
+        Goal Node found at the end of the search.
+    """
+    closed = set()
+    strategy(fringe, Node(problem.getStartState()))
+    
+    while(not fringe.isEmpty()):
+        node = fringe.pop()
+        if problem.isGoalState(node.state): return node
+        if node.state not in closed:
+            closed.add(node.state)
+            for successor in problem.getSuccessors(node.state):
+                strategy(fringe, Node(successor[0], node, successor[1]))
+
 def depthFirstSearch(problem):
-    """
-    Search the deepest nodes in the search tree first.
+    """Search the deepest nodes in the search tree first."""
+    def strategy(fringe, node):
+        fringe.push(node)
 
-    Your search algorithm needs to return a list of actions that reaches the
-    goal. Make sure to implement a graph search algorithm.
-
-    To get started, you might want to try some of these simple commands to
-    understand the search problem that is being passed in:
-
-    print("Start:", problem.getStartState())
-    print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
-    print("Start's successors:", problem.getSuccessors(problem.getStartState()))
-    """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    return _graph_search(problem, util.Stack(), strategy).directions
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
