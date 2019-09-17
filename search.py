@@ -82,11 +82,13 @@ class Node(object):
     def __init__(self,
                  state: any,
                  parent: Optional['Node'] = None,
-                 action: Optional[Directions] = None) -> None:
+                 action: Optional[Directions] = None,
+                 costFromParent: Optional[int] = 1) -> None:
         """Inits Node with a state and parent."""
         self.state = state
         self.parent = parent
         self.action = action
+        self.costFromParent = costFromParent
     
     @property
     def directions(self) -> List[Directions]:
@@ -99,6 +101,13 @@ class Node(object):
             return []
         else:
             return self.parent.directions + [self.action]
+    
+    @property
+    def costFromRoot(self) -> int:
+        if self.parent is None:
+            return self.costFromParent
+        else:
+            return self.parent.costFromRoot + self.costFromParent
     
     def __str__(self) -> str:
         return "Node at (%s)" % (", ".join(map(str, self.state)))
@@ -135,26 +144,28 @@ def _graph_search(problem: SearchProblem,
         if node.state not in closed:
             closed.add(node.state)
             for successor in problem.getSuccessors(node.state):
-                strategy(fringe, Node(successor[0], node, successor[1]))
+                strategy(fringe, Node(successor[0], node, successor[1], successor[2]))
 
 def depthFirstSearch(problem):
     """Search the deepest nodes in the search tree first."""
-    def strategy(fringe, node):
+    def strategy(fringe: Fringe, node: Node):
         fringe.push(node)
 
     return _graph_search(problem, util.Stack(), strategy).directions
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    def strategy(fringe, node):
+    def strategy(fringe: Fringe, node: Node):
         fringe.push(node)
 
     return _graph_search(problem, util.Queue(), strategy).directions
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    def strategy(fringe: Fringe, node: Node):
+        fringe.push(node, node.costFromRoot)
+
+    return _graph_search(problem, util.PriorityQueue(), strategy).directions
 
 def nullHeuristic(state, problem=None):
     """
